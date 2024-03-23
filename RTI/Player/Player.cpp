@@ -5,10 +5,17 @@
 #include <iostream>
 #include <fstream>
 #include <filesystem>
+#include <algorithm>
+#include <locale>
+
 #include <taglib/fileref.h>
 #include <taglib/tag.h>
 
-Player::Player() : m_progress(40, 340, 0, 100, 100, 720, false), m_playerState(MainScreen), m_playState(Paused), m_currentFilePath(""), m_brCurrentPath(L"/")
+namespace fs = std::filesystem;
+
+const std::vector<std::string> Player::s_brExtensions = std::vector<std::string>{ ".mp3", ".wav", ".aiff", ".aif", ".m4a", ".aac", ".flac", ".alac"};
+
+Player::Player() : m_progress(40, 340, 0, 100, 100, 720, false), m_playerState(MainScreen), m_playState(Paused), m_currentFilePath(""), m_brIndex(0), m_brCurrentPath(L"/")
 {
 	m_appTitle = "Music";
 	init();
@@ -32,6 +39,16 @@ void Player::init()
 		// error...
 	}
 
+
+	if (!m_brFileTexture.loadFromFile("Media/icons/player/file.png"))
+	{
+		// error...
+	}
+
+	if (!m_brFolderTexture.loadFromFile("Media/icons/player/folder.png"))
+	{
+		// error...
+	}
 
 
 	m_cover.setPosition(20.f, 60.f);
@@ -66,6 +83,10 @@ void Player::init()
 	m_audioPosition.setCharacterSize(30);
 	m_audioPosition.setString("00:00/00:00");
 	m_audioPosition.setPosition(280.f, 250.f);
+
+	m_browserDivider.setFillColor(sf::Color(192, 192, 192, 255));
+	m_browserDivider.setSize(sf::Vector2f(800.f, 1.f));
+	m_browserDivider.setPosition(0.f, 40.f);
 
 
 	for (int i = 0; i < 8; i++)
@@ -106,11 +127,45 @@ void Player::processClick(sf::RenderWindow& window)
 				}
 			}
 
+			switch (clicked)
+			{
+			case 0:
+				refreshBrowser();
+				m_playerState = Browsing;
+				break;
+			case 1:
+				m_playerState = Playlist;
+				break;
+			case 2:
+				prev();
+				break;
+			case 3:
+				rewind();
+				break;
+			case 4:
+				play();
+				break;
+			case 5:
+				pause();
+				break;
+			case 6:
+				ff();
+				break;
+			case 7:
+				next();
+				break;
+			default:
+				break;
+			}
 
 		}
 	}
 	else if (m_playerState == Browsing)
 	{
+		//If clicked dir - refresh,
+		// If clicked U/D - invalidate
+		//TODO
+
 
 	}
 	else if (m_playerState == Playlist)
@@ -137,6 +192,26 @@ void Player::draw(sf::RenderWindow& window)
 		window.draw(m_audioPosition);
 		m_progress.draw(window);
 	}
+	else if (m_playerState == Browsing)
+	{
+		for (int i = 0; i < m_brCurrentEntries.size(); i++)
+		{
+			//Render Text and buttons
+			window.draw(*m_brCurrentEntries[i].icon);
+			window.draw(m_brCurrentEntries[i].text);
+			m_browserDivider.setPosition(0.f, m_brCurrentEntries[i].text.getPosition().y + 30.f);
+			window.draw(m_browserDivider);
+		}
+
+
+
+
+		//Up/dn buttons + Upper Dir
+	}
+	else if (m_playerState == Playlist)
+	{
+		 
+	}
 }
 
 bool Player::openFile(std::string path)
@@ -155,7 +230,7 @@ bool Player::openFile(std::string path)
 	std::wstring sR = std::to_wstring((int)f.audioProperties()->sampleRate());
 	std::wstring c = std::to_wstring((int)f.audioProperties()->channels());
 	std::wstring b = std::to_wstring((int)f.audioProperties()->bitrate());
-	std::wstring ex = std::filesystem::path(path).extension().wstring().erase(0, 1);
+	std::wstring ex = fs::path(path).extension().wstring().erase(0, 1);
 	std::transform(ex.begin(), ex.end(), ex.begin(), ::toupper);
 
 	m_info.setString(sf::String(ex + L" " + sR + L"Hz@" + c + L"Ch. B:" + b + L"kbps"));
@@ -166,7 +241,7 @@ bool Player::openFile(std::string path)
 		m_currentArtist = L"";
 		m_currentAlbum = L"";
 
-		m_currentTitle = std::filesystem::path(path).filename().wstring();
+		m_currentTitle = fs::path(path).filename().wstring();
 
 		m_title.setString(sf::String(m_currentTitle));
 		m_album.setString(sf::String(m_currentAlbum));
@@ -261,7 +336,104 @@ void Player::pause()
 
 }
 
-void refreshBrowser()
+void Player::ff()
 {
+
+}
+
+void Player::rewind()
+{
+
+}
+
+void Player::next()
+{
+
+}
+
+void Player::prev()
+{
+
+}
+
+void Player::refreshBrowser()
+{
+	try
+	{
+		m_brData.clear();
+		std::locale loc;
+
+		for (auto& p : fs::directory_iterator(m_brCurrentPath))
+			if (p.is_directory())
+			{
+				m_brData.push_back(std::make_pair(0, std::make_pair(p.path().filename().wstring(), p.path().wstring())));
+			}
+			else
+			{
+				auto ex = p.path().extension().string();
+				std::transform(ex.begin(), ex.end(), ex.begin(), ::tolower);
+				if (std::find(Player::s_brExtensions.begin(), Player::s_brExtensions.end(), ex) != Player::s_brExtensions.end())
+				{
+					m_brData.push_back(std::make_pair(1, std::make_pair(p.path().filename().wstring(), p.path().wstring())));
+				}
+			}
+
+		std::sort(m_brData.begin(), m_brData.end(), [](auto& left, auto& right) {
+			
+			if (left.first != right.first) {
+				return left.first < right.first;
+			}
+
+			return left.second.first < right.second.first;
+				
+			});
+
+		for (int i = 0; i < m_brData.size(); i++)
+		{
+			std::wcout << m_brData[i].first << "|" << m_brData[i].second.first << std::endl;
+		}
+
+		m_brMaxIndex = m_brData.size() / 10;
+		m_brIndex = 0;
+
+		invalidateBrowser();
+	}
+	catch (...)
+	{
+		std::cout << "Access denied" << std::endl;
+	}
+
+}
+
+void Player::invalidateBrowser()
+{
+	auto start = m_brData.begin() + m_brIndex * 10;
+	auto end = (m_brIndex < m_brMaxIndex) ? start + 10 : m_brData.end();
+	int helper = 0;
+
+	m_brCurrentEntries.clear();
+
+	for (auto i = start; i != end; i++)
+	{
+		m_brCurrentEntries.push_back(BrowserEntry());
+		m_brCurrentEntries.back().text.setFont(*GlobalFont::get()->getFont());
+		m_brCurrentEntries.back().text.setFillColor(sf::Color(255, 255, 255, 255));
+
+		m_brCurrentEntries.back().text.setString(i->second.first);
+		m_brCurrentEntries.back().text.setCharacterSize(15);
+		m_brCurrentEntries.back().text.setPosition(sf::Vector2f(60.f, 50.f + 35.f * helper));
+
+		m_brCurrentEntries.back().icon = new sf::Sprite();
+		m_brCurrentEntries.back().icon->setTexture(i->first ? m_brFileTexture : m_brFolderTexture);
+		m_brCurrentEntries.back().icon->setPosition(sf::Vector2f(20.f, 50.f + 35.f * helper));
+		m_brCurrentEntries.back().browserData = *i;
+
+		//Button Add to PLIST
+
+
+		helper++;
+	}
+	
+
 
 }

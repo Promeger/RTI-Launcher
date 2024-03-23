@@ -21,6 +21,10 @@ public:
 
 	void play();
 	void pause();
+	void ff();
+	void rewind();
+	void next();
+	void prev();
 
 	enum PlayerState
 	{
@@ -39,6 +43,7 @@ private:
 	
 
 	void refreshBrowser();
+	void invalidateBrowser();
 
 
 	PlayerState m_playerState;
@@ -66,10 +71,31 @@ private:
 
 
 	//Browser
-	std::wstring m_brCurrentPath;
+	struct BrowserEntry
+	{
+		sf::Text text;
+		sf::Sprite* icon = NULL;
+		sf::RectangleShape addToPlist;
+		std::pair<int, std::pair<std::wstring, std::wstring>> browserData;
+	};
 
+	sf::RectangleShape m_browserDivider;
+	sf::RectangleShape m_browserButtons[3];
+	unsigned int m_brIndex;
+	unsigned int m_brMaxIndex;
+
+	std::wstring m_brCurrentPath;
+	std::vector<std::pair<int, std::pair<std::wstring, std::wstring>>> m_brData;
+
+	std::vector<BrowserEntry> m_brCurrentEntries;
+	sf::Texture m_brFileTexture;
+	sf::Texture m_brFolderTexture;
+
+
+	const static std::vector<std::string> s_brExtensions;
 
 	
 
-	//Texts
+
+	//Playlist
 };
