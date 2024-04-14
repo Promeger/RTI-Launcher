@@ -24,14 +24,17 @@ Slider::Slider(int x, int y, int min, int max, int value, int length, bool rende
 	m_maxValue = max;
 }
 
-void Slider::processClick(sf::RenderWindow& window)
+bool Slider::processClick(sf::RenderWindow& window)
 {
 	auto pos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
 	if (pos.x >= m_xCord && pos.x <= m_xCord + m_axisWidth && pos.y >= m_yCord - (m_sliderHeight / 2.f) && pos.y <= m_yCord + (m_sliderHeight / 2.f))
 	{
 		m_slider.setPosition(pos.x, m_yCord);
 		m_sliderValue = (int)(m_minValue + ((m_slider.getPosition().x - m_xCord) / m_axisWidth * (m_maxValue - m_minValue)));
+		return true;
 	}
+
+	return false;
 }
 
 int Slider::getValue()

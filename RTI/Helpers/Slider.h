@@ -5,7 +5,7 @@ class Slider
 {
 public:
 	Slider(int x, int y, int min, int max, int value = 0, int length = 100, bool renderTexts = true);
-	void processClick(sf::RenderWindow& window);
+	bool processClick(sf::RenderWindow& window);
 	int getValue();
 	void setValue(int newValue);
 	void setPercentValue(int newPercentValue);
